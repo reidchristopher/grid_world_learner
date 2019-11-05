@@ -127,28 +127,20 @@ class GridWorldLearner:
 
         reward = self.grid_world[self.x][self.y]
 
-        if self.x == self.goal_x and self.y == self.goal_y:
-            predicted_next_value = 0
+        if self.learner_type == LearnerType.TD_STATIC:
+            get_max = False
+        elif self.learner_type == LearnerType.Q_STATIC or self.learner_type == LearnerType.Q_DYNAMIC:
+            get_max = True
         else:
-            next_move_x, next_move_y = None, None
-            get_max = None
-            if self.learner_type == LearnerType.TD_STATIC:
-                get_max = False
-            elif self.learner_type == LearnerType.Q_STATIC or self.learner_type == LearnerType.Q_DYNAMIC:
-                get_max = True
-            else:
-                raise Exception("Invalid learner type")
+            raise Exception("Invalid learner type")
 
-            (next_move_x, next_move_y), next_action = self.choose_movement(return_best=get_max)
-
-            if self.learner_type == LearnerType.TD_STATIC:
-                predicted_next_value = self.value_table[next_move_x][next_move_y]
-            elif self.learner_type == LearnerType.Q_STATIC or self.learner_type == LearnerType.Q_DYNAMIC:
-                predicted_next_value = self.q_table[next_action][self.x][self.y]
+        (next_move_x, next_move_y), next_action = self.choose_movement(return_best=get_max)
 
         if self.learner_type == LearnerType.TD_STATIC:
+            predicted_next_value = self.value_table[next_move_x][next_move_y]
             self.value_table[self.x][self.y] += self.learning_rate * (reward + self.discount_rate * predicted_next_value - self.value_table[self.x][self.y])
         elif self.learner_type == LearnerType.Q_STATIC or self.learner_type == LearnerType.Q_DYNAMIC:
+            predicted_next_value = self.q_table[next_action][self.x][self.y]
             self.q_table[action][old_x][old_y] += self.learning_rate * (reward + self.discount_rate * predicted_next_value - self.q_table[action][old_x][old_y])
 
     def move_goal(self):
@@ -182,9 +174,6 @@ class GridWorldLearner:
 
                 if visualize and i % visualization_epoch == 0:
                     self.display_world()
-
-                if self.x == self.goal_x and self.y == self.goal_y:
-                    break
 
                 if self.learner_type == LearnerType.Q_DYNAMIC:
                     self.move_goal()
@@ -271,17 +260,17 @@ class GridWorldLearner:
 
 
 def main():
-    visualize = True
+    visualize = False
     visualization_interval = 25
 
     display_values = True
     num_tests = 1 if display_values or visualize else 100
 
-    num_iterations = 500
+    num_iterations = 10000
     recording_interval = 5
 
     epsilon = 0.1
-    learning_rate = 0.50
+    learning_rate = 0.5
     discount_rate = 0.9
     rewards = [None for i in range(num_tests)]
     for learner_type in [LearnerType.TD_STATIC, LearnerType.Q_STATIC, LearnerType.Q_DYNAMIC]:
@@ -311,7 +300,7 @@ def main():
         plt.legend(["State based TD", "State, Action based Q", "State, Action based Q with moving goal"])
         plt.grid()
         plt.xlim([0, num_iterations])
-        plt.ylim([-20, 20])
+        plt.ylim([-20, 400])
         plt.show()
 
 
